@@ -1,61 +1,70 @@
 # check_status.py
+"""
+无人机状态检查脚本
+功能：连接 AirSim 模拟器，获取无人机当前状态，并解锁无人机准备后续任务。
+适用于 AbandonedPark 环境。
+"""
+
 import airsim
 import time
+import sys
 
-print("=" * 50)
-print("无人机状态检查")
-print("=" * 50)
+def check_connection():
+    """检查与模拟器的连接，并返回客户端对象"""
+    print("=" * 50)
+    print("无人机状态检查")
+    print("=" * 50)
 
-# 连接到模拟器
-client = airsim.MultirotorClient()
-client.confirmConnection()
-print("✓ 已连接到AbandonedPark模拟器")
+    try:
+        # 创建多旋翼客户端并确认连接
+        client = airsim.MultirotorClient()
+        client.confirmConnection()
+        print("✓ 已连接到 AbandonedPark 模拟器")
+        return client
+    except Exception as e:
+        print(f"✗ 连接失败: {e}")
+        print("请确保模拟器已启动并处于无人机模式。")
+        sys.exit(1)
 
-# 检查无人机状态
-state = client.getMultirotorState()
-print(f"当前位置: X={state.kinematics_estimated.position.x_val:.1f}, "
-      f"Y={state.kinematics_estimated.position.y_val:.1f}, "
-      f"Z={state.kinematics_estimated.position.z_val:.1f}")
-print(f"当前速度: {state.speed} m/s")
-print(f"电池电量: {state.battery}%")
-print(f"是否碰撞: {state.collision.has_collided}")
+def print_state(client):
+    """获取并打印无人机的当前状态"""
+    try:
+        state = client.getMultirotorState()
+        pos = state.kinematics_estimated.position
+        print(f"当前位置: X={pos.x_val:.1f}, Y={pos.y_val:.1f}, Z={pos.z_val:.1f}")
+        print(f"当前速度: {state.speed:.2f} m/s")
+        print(f"电池电量: {state.battery:.1f}%")
+        print(f"是否碰撞: {state.collision.has_collided}")
+    except Exception as e:
+        print(f"获取状态失败: {e}")
 
-# 解锁无人机
-print("\n解锁无人机...")
-client.enableApiControl(True)
-client.armDisarm(True)
-print("✓ 无人机已解锁，准备就绪")
+def unlock_drone(client):
+    """解锁无人机（启用API控制并解除锁定）"""
+    print("\n解锁无人机...")
+    try:
+        client.enableApiControl(True)   # 允许API控制
+        client.armDisarm(True)          # 解锁电机
+        print("✓ 无人机已解锁，准备就绪")
+    except Exception as e:
+        print(f"✗ 解锁失败: {e}")
+        client.enableApiControl(False)  # 尝试释放控制
+        sys.exit(1)
 
-print("\n" + "=" * 50)
-print("状态检查完成！无人机可以正常控制")
-print("=" * 50)# check_status.py
-import airsim
-import time
+def main():
+    """主函数"""
+    # 1. 连接模拟器
+    client = check_connection()
 
-print("=" * 50)
-print("无人机状态视察")
-print("=" * 50)
+    # 2. 显示当前状态
+    print_state(client)
 
-# 连接到模拟器
-client = airsim.MultirotorClient()
-client.confirmConnection()
-print("✓ 已连接到AbandonedPark模拟器")
+    # 3. 解锁无人机
+    unlock_drone(client)
 
-# 检查无人机状态
-state = client.getMultirotorState()
-print(f"当前位置: X={state.kinematics_estimated.position.x_val:.1f}, "
-      f"Y={state.kinematics_estimated.position.y_val:.1f}, "
-      f"Z={state.kinematics_estimated.position.z_val:.1f}")
-print(f"当前速度: {state.speed} m/s")
-print(f"电池电量: {state.battery}%")
-print(f"是否碰撞: {state.collision.has_collided}")
+    # 4. 结束提示
+    print("\n" + "=" * 50)
+    print("状态检查完成！无人机可以正常控制")
+    print("=" * 50)
 
-# 解锁无人机
-print("\n解锁无人机...")
-client.enableApiControl(True)
-client.armDisarm(True)
-print("✓ 无人机已解锁，准备就绪")
-
-print("\n" + "=" * 50)
-print("状态检查完成！无人机可以正常控制")
-print("=" * 50)
+if __name__ == "__main__":
+    main()
